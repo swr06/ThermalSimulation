@@ -1,2 +1,2 @@
-# ThermalSimulation
-Volumetric Heat Transfer and Propogation simulation.
+# Candela-Mechanics
+Candela.. but with.. PHYSICS! :D
