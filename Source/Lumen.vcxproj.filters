@@ -415,7 +415,7 @@
     <None Include="Core\Shaders\2DElementShaderVert.glsl">
       <Filter>Source Files\Lumen\Lumen-Core\Lumen-Shaders</Filter>
     </None>
-    <None Include="Core\Shaders\BasicBlit.glsl">
+    <None Include="Core\Shaders\BasicBlit.frag">
       <Filter>Source Files\Lumen\Lumen-Core\Lumen-Shaders</Filter>
     </None>
     <None Include="Core\Shaders\BasicFrag.glsl">

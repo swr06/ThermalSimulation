@@ -53,14 +53,14 @@ int __MainViewMeshesRendered = 0;
 Candela::Player Player;
 Candela::FPSCamera& Camera = Player.Camera;
 
-static bool vsync = false;
+static bool vsync = true;
 static glm::vec3 _SunDirection = glm::vec3(0.1f, -1.0f, 0.1f);
 
 // Misc 
 static float InternalRenderResolution = 1.0f;
 static float RoughnessMultiplier = 1.0f;
-static bool DoNormalFix = true;
-static bool DoFaceCulling = true;
+static bool DoNormalFix = false;
+static bool DoFaceCulling = false;
 
 float SpeedMultiplier = 7.0f;
 
@@ -448,7 +448,7 @@ void Candela::StartPipeline()
 
 	// Create the main model 
 	Entity MainModelEntity(&MainModel);
-	MainModelEntity.m_Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
+	MainModelEntity.m_Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -526,9 +526,9 @@ void Candela::StartPipeline()
 
 		// VOXELIZE
 
-		if (false)
+		if (app.GetCurrentFrame() < 120)
 		{
-			Voxelizer::Voxelize(Camera.GetPosition(), EntityRenderList);
+			Voxelizer::Voxelize(glm::vec3(0.0,5.,0.), EntityRenderList);
 		}
 
 
@@ -583,9 +583,18 @@ void Candela::StartPipeline()
 
 		BasicBlitShader.Use();
 		BasicBlitShader.SetInteger("u_Texture", 0);
+		BasicBlitShader.SetInteger("u_Volume", 1);
+		BasicBlitShader.SetInteger("u_Frame", app.GetCurrentFrame());
+		BasicBlitShader.SetInteger("u_VoxelRange", Voxelizer::GetVolRange());
+		BasicBlitShader.SetInteger("u_VoxelVolSize", Voxelizer::GetVolSize());
+		
+		SetCommonUniforms<GLClasses::Shader>(BasicBlitShader, UniformBuffer);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, GBuffer.GetTexture());
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetVolume());
 
 		ScreenQuadVAO.Bind();
 		glDrawArrays(GL_TRIANGLES, 0, 6);

@@ -277,7 +277,7 @@
   <ItemGroup>
     <None Include="Core\Shaders\2DElementShaderFrag.glsl" />
     <None Include="Core\Shaders\2DElementShaderVert.glsl" />
-    <None Include="Core\Shaders\BasicBlit.glsl" />
+    <None Include="Core\Shaders\BasicBlit.frag" />
     <None Include="Core\Shaders\BasicFrag.glsl" />
     <None Include="Core\Shaders\BasicVert.glsl" />
     <None Include="Core\Shaders\ClearData.comp" />
