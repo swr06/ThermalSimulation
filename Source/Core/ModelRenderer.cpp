@@ -128,6 +128,7 @@ void Candela::RenderEntityV(Entity& entity, GLClasses::Shader& shader)
 	Object* object = entity.m_Object;
 
 	shader.SetMatrix4("u_ModelMatrix", entity.m_Model);
+	shader.SetFloat("u_Temperature", entity.m_Temperature);
 
 	int DrawCalls = 0;
 

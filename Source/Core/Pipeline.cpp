@@ -403,6 +403,14 @@ void SetCommonUniforms(T& shader, CommonUniforms& uniforms) {
 	shader.SetFloat("u_zFar", Camera.GetFarPlane());
 }
 
+void DecomposeMatrix(const glm::mat4& matrix, glm::vec3& position, glm::vec3& scale) {
+	position = glm::vec3(matrix[3]);
+	scale = glm::vec3(
+		glm::length(glm::vec3(matrix[0])),
+		glm::length(glm::vec3(matrix[1])),
+		glm::length(glm::vec3(matrix[2]))
+	);
+}
 
 void Candela::StartPipeline()
 {
@@ -448,7 +456,16 @@ void Candela::StartPipeline()
 
 	// Create the main model 
 	Entity MainModelEntity(&MainModel);
-	MainModelEntity.m_Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+	MainModelEntity.m_Model = glm::scale(glm::mat4(MainModelEntity.m_Model), glm::vec3(0.05f));
+
+	Entity Cube1(&Cube);
+	Cube1.m_Model = glm::translate(Cube1.m_Model, glm::vec3(0., 6.52967, 6.));
+	Cube1.m_Model = glm::scale(Cube1.m_Model, glm::vec3(16.2812, 6.50893, 9.07462));
+
+	Entity Cube2(&Cube);
+	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
+	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
+
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -491,6 +508,8 @@ void Candela::StartPipeline()
 	Voxelizer::RecompileShaders();
 
 	EntityRenderList.push_back(&MainModelEntity);
+	EntityRenderList.push_back(&Cube1);
+	EntityRenderList.push_back(&Cube2);
 
 	std::vector<Entity> TempEntityBuffer;
 
@@ -529,6 +548,16 @@ void Candela::StartPipeline()
 		if (app.GetCurrentFrame() < 120)
 		{
 			Voxelizer::Voxelize(glm::vec3(0.0,5.,0.), EntityRenderList);
+		}
+
+		if (app.GetCurrentFrame() % 128 == 0) {
+			for (auto& e : EntityRenderList) {
+				glm::vec3 p, s;
+				DecomposeMatrix(e->m_Model, p, s);
+				std::cout << "P : " << p.x << " " << p.y << " " << p.z << "\n";
+				std::cout << "S : " << s.x << " " << s.y << " " << s.z << "\n";
+				std::cout << "\n\n";
+			}
 		}
 
 

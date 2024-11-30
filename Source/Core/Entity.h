@@ -50,6 +50,8 @@ namespace Candela
 		bool m_UseAlbedoMap = true;
 		bool m_UsePBRMap = true;
 
+		float m_Temperature = 0.;
+
 		bool m_IsSphereLight = false;
 	};
 }

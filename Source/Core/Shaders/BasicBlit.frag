@@ -129,13 +129,17 @@ void main() {
 	vec3 RayDirection = normalize(SampleIncidentRayDirection(v_TexCoords));
 
 	o_Color = texture(u_Input, v_TexCoords).xyzw;
-	//ivec3 Coord = ivec3(int(gl_FragCoord.x), int(gl_FragCoord.y), u_Frame % 256);
-	//vec3 w,n;
-	//bool IntersectedVoxelizedWorld = DDA(RayOrigin, RayDirection, int(10000), n, w);
-	//o_Color.xyz = vec3(0.5,0.5,0.5);
-	//if (IntersectedVoxelizedWorld) {
-	//	o_Color.xyz = vec3(n);
-	//}
-	//
+	
+	bool debug = false;
+
+	if (debug) {
+		ivec3 Coord = ivec3(int(gl_FragCoord.x), int(gl_FragCoord.y), u_Frame % 256);
+		vec3 w,n;
+		bool IntersectedVoxelizedWorld = DDA(RayOrigin, RayDirection, int(10000), n, w);
+		o_Color.xyz = vec3(0.5,0.5,0.5);
+		if (IntersectedVoxelizedWorld) {
+			o_Color.xyz = vec3(n);
+		}
+	}
 	o_Color.w=1.;
 }
