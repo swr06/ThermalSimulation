@@ -130,7 +130,7 @@ void main() {
 
 	o_Color = texture(u_Input, v_TexCoords).xyzw;
 	
-	bool debug = false;
+	bool debug = true;
 
 	if (debug) {
 		ivec3 Coord = ivec3(int(gl_FragCoord.x), int(gl_FragCoord.y), u_Frame % 256);

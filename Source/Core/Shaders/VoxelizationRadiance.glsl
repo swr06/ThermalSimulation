@@ -4,7 +4,7 @@
 #define char uint 
 
 layout(R8, binding = 0) uniform image3D o_VoxelVolume;
-layout(R16F, binding = 0) uniform image3D o_Temperature;
+layout(R16F, binding = 1) uniform image3D o_Temperature;
 
 in vec3 g_WorldPosition;
 in vec3 g_VolumePosition;

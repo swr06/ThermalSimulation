@@ -465,7 +465,7 @@ void Candela::StartPipeline()
 	Entity Cube2(&Cube);
 	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
 	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
-
+	Cube2.m_Temperature = 100.;
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -623,7 +623,7 @@ void Candela::StartPipeline()
 		glBindTexture(GL_TEXTURE_2D, GBuffer.GetTexture());
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetVolume());
+		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTVolume());
 
 		ScreenQuadVAO.Bind();
 		glDrawArrays(GL_TRIANGLES, 0, 6);

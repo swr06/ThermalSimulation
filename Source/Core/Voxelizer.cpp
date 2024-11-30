@@ -109,6 +109,10 @@ namespace Candela {
 	GLuint Voxelizer::GetVolume() {
 		return VoxelMap;
 	}
+	
+	GLuint Voxelizer::GetTVolume() {
+		return TemperatureMap;
+	}
 
 	int Voxelizer::GetVolSize()
 	{
