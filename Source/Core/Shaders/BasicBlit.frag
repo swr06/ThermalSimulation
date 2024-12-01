@@ -20,6 +20,7 @@ uniform int u_VoxelRange;
 uniform int u_VoxelVolSize;
 
 uniform bool u_Ye;
+uniform bool u_Skibidi;
 
 in vec2 v_TexCoords;
 
@@ -156,12 +157,12 @@ vec3 blackbody(float t) {
 
 // T is between 0 and 1
 vec3 Heatmap(float T) {
-	T *= 3.14159f;
-	vec3 col;
-    col.r = sin(T);
-    col.g = sin(T*2.);
-    col.b = cos(T);
-	return col;
+    float level = T*3.14159265/2.;
+    vec3 col;
+    col.r = sin(level);
+    col.g = sin(level*2.);
+    col.b = cos(level);
+    return col;
 }
 
 void main() {
@@ -177,7 +178,11 @@ void main() {
 	o_Color = vec4(0.);
 
 	if (Depth < 0.99999999) {
-		o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*500.);
+		//o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*10000.);
+		float T = texture(u_Volume, Voxel).x;
+		T = 1. - exp(-T);
+		T *= 1.3f;
+		o_Color.xyz = Heatmap(T);
 	}
 
 	if (u_Ye) {

@@ -3,40 +3,73 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 layout(R32F, binding = 1) uniform image3D o_Texture;
+layout(R32F, binding = 2) uniform image3D i_Alpha;
 
 uniform float u_Dt;
 uniform float u_DeltaTime;
 uniform float u_Ratio;
 uniform float u_Dim;
+uniform int u_Frame;
 
 uniform sampler3D i_Prev;
 		
 void main() { 
 
 	ivec3 Texel = ivec3(gl_GlobalInvocationID.xyz);
-	float Current = imageLoad(o_Texture, Texel).x;
+	float Current =	u_Frame < 4 ? imageLoad(o_Texture, Texel).x : texelFetch(i_Prev, Texel, 0).x;
 
 	// Blur previous buffer 
 
+	float AlphaSampled = imageLoad(i_Alpha, Texel).x;
+
 	float Laplacian = 0.0f;
 
-	ivec3 Offsets[6] = ivec3[](ivec3(1, 0, 0), ivec3(-1, 0, 0), ivec3(0, 1, 0),
-                            ivec3(0, -1, 0), ivec3(0, 0, 1), ivec3(0, 0, -1));
+	bool Mode = false;
+
+	if (Mode) {
+
+		int radius = 1; 
+		float weightSum = 0.0; 
+
+		for (int x = -radius; x <= radius; x++) {
+			for (int y = -radius; y <= radius; y++) {
+				for (int z = -radius; z <= radius; z++) {
+					ivec3 offset = ivec3(x, y, z);
+					ivec3 neighbor = Texel + offset;
+					if (offset == ivec3(0)) continue;
+
+					float distance = length(vec3(offset));
+					float weight = 1.0 / (distance * distance);
+					weightSum += weight;
+
+					float neighborTemp = texelFetch(i_Prev, neighbor, 0).x;
+					Laplacian += weight * (neighborTemp - Current);
+				}
+			}
+		}
+
+		Laplacian /= weightSum;
+		Laplacian /= u_Ratio * u_Ratio;
+
+	} else {
+		ivec3 Offsets[6] = ivec3[](ivec3(1, 0, 0), ivec3(-1, 0, 0), ivec3(0, 1, 0),
+								ivec3(0, -1, 0), ivec3(0, 0, 1), ivec3(0, 0, -1));
 
 
-	for (int i = 0; i < 6; i++) {
-        ivec3 Neighbour = Texel + Offsets[i];
-		vec3 Scaled = vec3(Neighbour) / u_Dim;
-		//Sum += texture(i_Prev, Scaled).x;
-		Laplacian += texelFetch(i_Prev, Neighbour, 0).x - Current;
+		for (int i = 0; i < 6; i++) {
+			ivec3 Neighbour = Texel + Offsets[i];
+			vec3 Scaled = vec3(Neighbour) / u_Dim;
+			Laplacian += texelFetch(i_Prev, Neighbour, 0).x - Current;
+		}
+
+		Laplacian /= u_Ratio * u_Ratio;
 	}
-
-	Laplacian /= u_Ratio * u_Ratio;
-
 	//float Result = Current + (Sum - Current*6.) * 0.1f ;
 
 	float Alpha = 0.002f;
-	float Result = Current + Laplacian * Alpha;
+	float Result = Current + Laplacian * (5. * 8.41e-5f / (u_Ratio*u_Ratio)) * u_DeltaTime;
 
-	imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Result));
+	if (!isnan(Result) && !isinf(Result)) {
+		imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Result));
+	}
 }

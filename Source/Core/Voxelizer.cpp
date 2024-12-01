@@ -29,6 +29,10 @@ namespace Candela {
 		return p;
 	}
 
+	double AlphaTransform(double alpha, int n, double m) {
+		double ratio = m / n;
+		return alpha / (ratio * ratio);
+	}
 
 	void Voxelizer::CreateVolumes()
 	{
@@ -39,7 +43,7 @@ namespace Candela {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_FLOAT, nullptr);
 
 		glGenTextures(1, &TemperatureMap);
 		glBindTexture(GL_TEXTURE_3D, TemperatureMap);
@@ -87,7 +91,17 @@ namespace Candela {
 		int GROUP_SIZE = 8;
 
 		ClearShader->Use();
-		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R8);
+		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+		ClearShader->Use();
+		glBindImageTexture(0, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+		ClearShader->Use();
+		glBindImageTexture(0, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -112,6 +126,7 @@ namespace Candela {
 			if (e->m_EmissiveAmount > 0.001f) {
 				continue;
 			}
+			VoxelizeShader->SetFloat("u_TAlpha", AlphaTransform(e->m_Alpha, VOXELRES, RangeV));
 			RenderEntityV(*e, *VoxelizeShader);
 		}
 	}

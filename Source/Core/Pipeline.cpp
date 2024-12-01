@@ -416,6 +416,8 @@ void DecomposeMatrix(const glm::mat4& matrix, glm::vec3& position, glm::vec3& sc
 	);
 }
 
+
+
 void Candela::StartPipeline()
 {
 	// Matrices to rotate models whose axis basis is different 
@@ -461,15 +463,18 @@ void Candela::StartPipeline()
 	// Create the main model 
 	Entity MainModelEntity(&MainModel);
 	MainModelEntity.m_Model = glm::scale(glm::mat4(MainModelEntity.m_Model), glm::vec3(0.05f));
+	MainModelEntity.m_Alpha = 4.74e-7;
 
 	Entity Cube1(&Cube);
 	Cube1.m_Model = glm::translate(Cube1.m_Model, glm::vec3(0., 6.52967, 6.));
 	Cube1.m_Model = glm::scale(Cube1.m_Model, glm::vec3(16.2812, 6.50893, 9.07462));
+	Cube1.m_Alpha = 8.41e-5;
 
 	Entity Cube2(&Cube);
 	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
 	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
-	Cube2.m_Temperature = 500.0;
+	Cube2.m_Temperature = 360.0f;
+	Cube2.m_Alpha = 4.74e-7;
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -616,16 +621,18 @@ void Candela::StartPipeline()
 
 		// Simulation :flushed:
 
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 3; i++) {
 			SimulateShader.Use();
 			SimulateShader.SetFloat("u_Dt", DeltaTime);
 			SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
 			SimulateShader.SetFloat("u_Ratio", float(Voxelizer::GetVolRange()) / float(Voxelizer::GetVolSize()));
 			SimulateShader.SetFloat("u_Dim", Voxelizer::GetVolSize());
 			SimulateShader.SetInteger("i_Prev", 0);
+			SimulateShader.SetInteger("u_Frame", app.GetCurrentFrame());
 
 			// Current output
 			glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+			glBindImageTexture(2, Voxelizer::GetVolume(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
