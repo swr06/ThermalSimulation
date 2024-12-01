@@ -40,7 +40,7 @@ namespace Candela
 		float m_EntityRoughness = 0.75f;
 		float m_EntityMetalness = 0.0f;
 		float m_EntityRoughnessMultiplier = 1.0f;
-		float m_Alpha = 0.000000001f;
+		float m_Alpha = 1.;
 
 		// 1.0 -> Completely translucent
 		// 0.0 -> Opaque

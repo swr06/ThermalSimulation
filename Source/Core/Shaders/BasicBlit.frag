@@ -45,7 +45,7 @@ vec3 TransformToVoxelSpace(vec3 WorldPosition) {
 	return (Voxel * float(u_VoxelVolSize));
 }
 
-bool InsideVolume(vec3 p) { float e = 384.0f; return abs(p.x) < e && abs(p.y) < e && abs(p.z) < e ; } 
+bool InsideVolume(vec3 p) { float e = float(u_VoxelVolSize); return abs(p.x) < e && abs(p.y) < e && abs(p.z) < e ; } 
 
 // Voxelization
 bool DDA(vec3 origin, vec3 direction, int dist, out vec3 normal, out vec3 world_pos)
@@ -181,7 +181,7 @@ void main() {
 		//o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*10000.);
 		float T = texture(u_Volume, Voxel).x;
 		T = 1. - exp(-T);
-		T *= 1.3f;
+		T *= 1.1f;
 		o_Color.xyz = Heatmap(T);
 	}
 

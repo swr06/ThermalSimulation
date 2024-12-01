@@ -38,8 +38,8 @@ namespace Candela {
 	{
 		glGenTextures(1, &VoxelMap);
 		glBindTexture(GL_TEXTURE_3D, VoxelMap);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -91,26 +91,27 @@ namespace Candela {
 		int GROUP_SIZE = 8;
 
 		ClearShader->Use();
+		ClearShader->SetFloat("u_ClearValue", 0.6f);
 		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		ClearShader->Use();
+		ClearShader->SetFloat("u_ClearValue", 0.0f);
 		glBindImageTexture(0, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		ClearShader->Use();
-		glBindImageTexture(0, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+		ClearShader->SetFloat("u_ClearValue", 0.0f);
+		glBindImageTexture(0, TemperatureMap1, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-		// Voxelize ->
+		//// Voxelize ->
 		
 		VoxelizeShader->Use();
-		
-		glBindTexture(GL_TEXTURE_3D, VoxelMap);
-		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R8);
+		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		glBindImageTexture(1, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		
 		VoxelizeShader->SetVector3f("u_VoxelGridCenter", Position);
@@ -126,7 +127,8 @@ namespace Candela {
 			if (e->m_EmissiveAmount > 0.001f) {
 				continue;
 			}
-			VoxelizeShader->SetFloat("u_TAlpha", AlphaTransform(e->m_Alpha, VOXELRES, RangeV));
+			//VoxelizeShader->SetFloat("u_TAlpha", AlphaTransform(e->m_Alpha, VOXELRES, RangeV));
+			VoxelizeShader->SetFloat("u_TAlpha", e->m_Alpha);
 			RenderEntityV(*e, *VoxelizeShader);
 		}
 	}

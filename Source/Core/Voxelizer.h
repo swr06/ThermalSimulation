@@ -12,7 +12,7 @@
 
 namespace Candela {
 	namespace Voxelizer {
-
+		 
 		void CreateVolumes();
 		void Voxelize(glm::vec3 Position, const std::vector<Entity*>& EntityList);
 		void RecompileShaders();

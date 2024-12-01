@@ -16,7 +16,7 @@ uniform sampler3D i_Prev;
 void main() { 
 
 	ivec3 Texel = ivec3(gl_GlobalInvocationID.xyz);
-	float Current =	u_Frame < 4 ? imageLoad(o_Texture, Texel).x : texelFetch(i_Prev, Texel, 0).x;
+	float Current =	u_Frame <= 4 ? imageLoad(o_Texture, Texel).x : texelFetch(i_Prev, Texel, 0).x;
 
 	// Blur previous buffer 
 
@@ -26,29 +26,34 @@ void main() {
 
 	bool Mode = false;
 
+
+
 	if (Mode) {
 
-		int radius = 1; 
-		float weightSum = 0.0; 
+		int Kernel = 1; 
+		float Sigma = 0.0; 
 
-		for (int x = -radius; x <= radius; x++) {
-			for (int y = -radius; y <= radius; y++) {
-				for (int z = -radius; z <= radius; z++) {
-					ivec3 offset = ivec3(x, y, z);
-					ivec3 neighbor = Texel + offset;
-					if (offset == ivec3(0)) continue;
+		for (int x = -Kernel; x <= Kernel; x++) {
+			for (int y = -Kernel; y <= Kernel; y++) {
+				for (int z = -Kernel; z <= Kernel; z++) {
+					ivec3 Neighbourhood = ivec3(x, y, z);
+					ivec3 NeighbourTexel = Texel + Neighbourhood;
 
-					float distance = length(vec3(offset));
-					float weight = 1.0 / (distance * distance);
-					weightSum += weight;
+					if (Neighbourhood == ivec3(0)) {
+						continue;
+					}
 
-					float neighborTemp = texelFetch(i_Prev, neighbor, 0).x;
+					float d = length(vec3(NeighbourTexel));
+					float weight = 1.0 / (d * d);
+					Sigma += weight;
+
+					float neighborTemp = texelFetch(i_Prev, NeighbourTexel, 0).x;
 					Laplacian += weight * (neighborTemp - Current);
 				}
 			}
 		}
 
-		Laplacian /= weightSum;
+		Laplacian /= Sigma;
 		Laplacian /= u_Ratio * u_Ratio;
 
 	} else {
@@ -67,7 +72,16 @@ void main() {
 	//float Result = Current + (Sum - Current*6.) * 0.1f ;
 
 	float Alpha = 0.002f;
-	float Result = Current + Laplacian * (5. * 8.41e-5f / (u_Ratio*u_Ratio)) * u_DeltaTime;
+	float Result = Current + Laplacian * (4. * AlphaSampled * 8.41e-5f / (u_Ratio*u_Ratio)) * u_DeltaTime;
+
+	// Boundary Condition
+	bool Boundary = (Texel.x == 0 || Texel.x == int(u_Dim) - 1 ||
+                       Texel.y == 0 || Texel.y == int(u_Dim) - 1 ||
+                       Texel.z == 0 || Texel.z == int(u_Dim) - 1);
+
+    //if (Boundary) {
+    //    Result = 0.;
+	//}
 
 	if (!isnan(Result) && !isinf(Result)) {
 		imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Result));

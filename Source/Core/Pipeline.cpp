@@ -463,18 +463,18 @@ void Candela::StartPipeline()
 	// Create the main model 
 	Entity MainModelEntity(&MainModel);
 	MainModelEntity.m_Model = glm::scale(glm::mat4(MainModelEntity.m_Model), glm::vec3(0.05f));
-	MainModelEntity.m_Alpha = 4.74e-7;
+	MainModelEntity.m_Alpha = 1.0;
 
 	Entity Cube1(&Cube);
 	Cube1.m_Model = glm::translate(Cube1.m_Model, glm::vec3(0., 6.52967, 6.));
 	Cube1.m_Model = glm::scale(Cube1.m_Model, glm::vec3(16.2812, 6.50893, 9.07462));
-	Cube1.m_Alpha = 8.41e-5;
+	Cube1.m_Alpha = 0.5;
 
 	Entity Cube2(&Cube);
 	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
 	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
-	Cube2.m_Temperature = 360.0f;
-	Cube2.m_Alpha = 4.74e-7;
+	Cube2.m_Temperature = 380.0f;
+	Cube2.m_Alpha = 0.9;
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -558,8 +558,7 @@ void Candela::StartPipeline()
 		CommonUniforms UniformBuffer = { View, Projection, InverseView, InverseProjection, PreviousProjection, PreviousView, glm::inverse(PreviousProjection), glm::inverse(PreviousView), (int)app.GetCurrentFrame(), SunDirection};
 
 		// VOXELIZE
-
-		if (app.GetCurrentFrame() < 120)
+		if (app.GetCurrentFrame() <= 2)
 		{
 			Voxelizer::Voxelize(glm::vec3(0.0,5.,0.), EntityRenderList);
 		}
@@ -621,7 +620,7 @@ void Candela::StartPipeline()
 
 		// Simulation :flushed:
 
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 2; i++) {
 			SimulateShader.Use();
 			SimulateShader.SetFloat("u_Dt", DeltaTime);
 			SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
