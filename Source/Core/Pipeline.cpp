@@ -90,6 +90,9 @@ std::vector<Candela::Entity*> EntityRenderList;
 // GBuffers
 GLClasses::Framebuffer GBuffer(16, 16, {{GL_RGBA16F, GL_RGBA, GL_FLOAT, false, false}, {GL_R16I, GL_RED_INTEGER, GL_SHORT, false, false} }, false, true);
 
+GLClasses::ComputeShader SimulateShader;
+
+
 // Draws editor grid 
 void DrawGrid(const glm::mat4 CameraMatrix, const glm::mat4& ProjectionMatrix, const glm::vec3& GridBasis, float size) 
 {
@@ -318,6 +321,7 @@ public:
 			Candela::ShaderManager::RecompileShaders();
 			Candela::Voxelizer::RecompileShaders();
 			Intersector.Recompile();
+			SimulateShader.Recompile();
 		}
 
 		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_F3 && this->GetCurrentFrame() > 5)
@@ -465,7 +469,7 @@ void Candela::StartPipeline()
 	Entity Cube2(&Cube);
 	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
 	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
-	Cube2.m_Temperature = 100.;
+	Cube2.m_Temperature = 100.0;
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -495,6 +499,9 @@ void Candela::StartPipeline()
 	GLClasses::Shader& GBufferShader = ShaderManager::GetShader("GBUFFER");
 	GLClasses::Shader& BasicBlitShader = ShaderManager::GetShader("BASIC_BLIT");
 
+	SimulateShader.CreateComputeShader("Core/Shaders/Simulate.comp");
+	SimulateShader.Compile();
+
 	// Matrices
 	glm::mat4 PreviousView;
 	glm::mat4 PreviousProjection;
@@ -512,6 +519,8 @@ void Candela::StartPipeline()
 	EntityRenderList.push_back(&Cube2);
 
 	std::vector<Entity> TempEntityBuffer;
+
+	bool PrevSimBuff = 1;
 
 	while (!glfwWindowShouldClose(app.GetWindow()))
 	{
@@ -604,6 +613,23 @@ void Candela::StartPipeline()
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 
+		// Simulation :flushed:
+
+		SimulateShader.Use();
+		SimulateShader.SetFloat("u_Dt", DeltaTime);
+		SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
+		SimulateShader.SetFloat("u_Ratio", float(Voxelizer::GetVolRange())/float(Voxelizer::GetVolSize()));
+		SimulateShader.SetFloat("u_Dim", Voxelizer::GetVolSize());
+		SimulateShader.SetInteger("i_Prev", 0);
+
+		// Current output
+		glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
+
+		glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		// Blit! 
 
@@ -613,9 +639,12 @@ void Candela::StartPipeline()
 		BasicBlitShader.Use();
 		BasicBlitShader.SetInteger("u_Texture", 0);
 		BasicBlitShader.SetInteger("u_Volume", 1);
+		BasicBlitShader.SetInteger("u_Depth", 2);
 		BasicBlitShader.SetInteger("u_Frame", app.GetCurrentFrame());
 		BasicBlitShader.SetInteger("u_VoxelRange", Voxelizer::GetVolRange());
 		BasicBlitShader.SetInteger("u_VoxelVolSize", Voxelizer::GetVolSize());
+
+		BasicBlitShader.SetBool("u_Ye", glfwGetKey(app.GetWindow(), GLFW_KEY_F) == GLFW_PRESS);
 		
 		SetCommonUniforms<GLClasses::Shader>(BasicBlitShader, UniformBuffer);
 
@@ -623,7 +652,10 @@ void Candela::StartPipeline()
 		glBindTexture(GL_TEXTURE_2D, GBuffer.GetTexture());
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTVolume());
+		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(!PrevSimBuff));
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, GBuffer.GetDepthBuffer());
 
 		ScreenQuadVAO.Bind();
 		glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -633,6 +665,8 @@ void Candela::StartPipeline()
 
 		glFinish();
 		app.FinishFrame();
+
+		PrevSimBuff = !PrevSimBuff;
 
 		CurrentTime = glfwGetTime();
 		DeltaTime = CurrentTime - Frametime;

@@ -4,6 +4,7 @@ layout (location = 0) out vec4 o_Color;
 
 uniform sampler2D u_Input;
 uniform sampler3D u_Volume;
+uniform sampler2D u_Depth;
 
 uniform int u_Frame;
 
@@ -18,8 +19,19 @@ uniform vec2 u_Dims;
 uniform int u_VoxelRange;
 uniform int u_VoxelVolSize;
 
+uniform bool u_Ye;
+
 in vec2 v_TexCoords;
 
+vec3 WorldPosFromDepth(float depth, vec2 txc)
+{
+    float z = depth * 2.0 - 1.0;
+    vec4 ClipSpacePosition = vec4(txc * 2.0 - 1.0, z, 1.0);
+    vec4 ViewSpacePosition = u_InverseProjection * ClipSpacePosition;
+    ViewSpacePosition /= ViewSpacePosition.w;
+    vec4 WorldPos = u_InverseView * ViewSpacePosition;
+    return WorldPos.xyz;
+}
 
 // Voxelization
 vec3 TransformToVoxelSpace(vec3 WorldPosition) {
@@ -123,14 +135,45 @@ vec3 SampleIncidentRayDirection(vec2 screenspace)
 	return normalize(vec3(u_InverseView * eye));
 }
 
+vec3 blackbody(float t) {
+    float p = pow(t, -1.5);
+    float l = log(t);
+    
+	vec3 color;
+    color.r = 220000.0 * p + 0.5804;
+    color.g = 0.3923 * l - 2.4431;
+    if (t > 6500.0) 
+		color.g = 138039.0 * p + 0.738;
+    color.b = 0.7615 * l - 5.681;
+    
+    color = clamp(color, 0.0, 1.0);
+    
+    if (t < 1000.0) 
+		color *= t/1000.0;
+        
+    return color;
+}
+
 void main() {
+
+	float Depth = texture(u_Depth, v_TexCoords).x;
+	vec3 WorldPos = WorldPosFromDepth(Depth, v_TexCoords).xyz;
+	vec3 Voxel = TransformToVoxelSpace(WorldPos) / float(u_VoxelVolSize);
+	Voxel = clamp(Voxel,0.,1.);
 
 	vec3 RayOrigin = u_InverseView[3].xyz;
 	vec3 RayDirection = normalize(SampleIncidentRayDirection(v_TexCoords));
 
-	o_Color = texture(u_Input, v_TexCoords).xyzw;
-	
-	bool debug = true;
+	o_Color = vec4(0.);
+
+	if (Depth < 0.99999999) {
+		o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*1000.);
+	}
+
+	if (u_Ye) {
+		o_Color.xyz = texture(u_Input, v_TexCoords).xxx;
+	}
+	bool debug = false;
 
 	if (debug) {
 		ivec3 Coord = ivec3(int(gl_FragCoord.x), int(gl_FragCoord.y), u_Frame % 256);

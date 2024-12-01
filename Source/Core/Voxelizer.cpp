@@ -13,6 +13,7 @@ namespace Candela {
 
 	static GLuint VoxelMap = 0;
 	static GLuint TemperatureMap = 0;
+	static GLuint TemperatureMap1 = 0;
 
 	static float Align(float value, float size)
 	{
@@ -47,7 +48,16 @@ namespace Candela {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_HALF_FLOAT, nullptr);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_FLOAT, nullptr);
+
+		glGenTextures(1, &TemperatureMap1);
+		glBindTexture(GL_TEXTURE_3D, TemperatureMap1);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_FLOAT, nullptr);
 
 		ClearShader = new GLClasses::ComputeShader();
 		ClearShader->CreateComputeShader("Core/Shaders/ClearVVolume.glsl");
@@ -87,7 +97,7 @@ namespace Candela {
 		
 		glBindTexture(GL_TEXTURE_3D, VoxelMap);
 		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R8);
-		glBindImageTexture(1, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R16);
+		glBindImageTexture(1, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		
 		VoxelizeShader->SetVector3f("u_VoxelGridCenter", Position);
 		VoxelizeShader->SetVector3f("u_VoxelGridCenterF", Position);
@@ -109,10 +119,12 @@ namespace Candela {
 	GLuint Voxelizer::GetVolume() {
 		return VoxelMap;
 	}
-	
-	GLuint Voxelizer::GetTVolume() {
-		return TemperatureMap;
+
+	GLuint Voxelizer::GetTempVolume(bool x)
+	{
+		return x ? TemperatureMap : TemperatureMap1;
 	}
+	
 
 	int Voxelizer::GetVolSize()
 	{

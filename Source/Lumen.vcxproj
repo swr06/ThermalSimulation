@@ -287,6 +287,7 @@
     <None Include="Core\Shaders\FBOVert.glsl" />
     <None Include="Core\Shaders\GeometryFrag.glsl" />
     <None Include="Core\Shaders\GeometryVert.glsl" />
+    <None Include="Core\Shaders\Simulate.comp" />
     <None Include="Core\Shaders\TraverseBVH.glsl" />
     <None Include="Core\Shaders\VoxelizationGeometry.geom" />
     <None Include="Core\Shaders\VoxelizationRadiance.glsl" />

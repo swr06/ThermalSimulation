@@ -17,8 +17,9 @@ namespace Candela {
 		void Voxelize(glm::vec3 Position, const std::vector<Entity*>& EntityList);
 		void RecompileShaders();
 		GLuint GetVolume();
-		GLuint GetTVolume();
+		GLuint GetTempVolume(bool x);
 		int GetVolSize();
 		int GetVolRange();
+
 	}
 }

@@ -1,0 +1,37 @@
+#version 450 core
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(R32F, binding = 1) uniform image3D o_Texture;
+
+uniform float u_Dt;
+uniform float u_DeltaTime;
+uniform float u_Ratio;
+uniform float u_Dim;
+
+uniform sampler3D i_Prev;
+		
+void main() { 
+
+	ivec3 Texel = ivec3(gl_GlobalInvocationID.xyz);
+	float Current = imageLoad(o_Texture, Texel).x;
+
+	// Blur previous buffer 
+
+	float Sum = 0.0f;
+
+	ivec3 Offsets[6] = ivec3[](ivec3(1, 0, 0), ivec3(-1, 0, 0), ivec3(0, 1, 0),
+                            ivec3(0, -1, 0), ivec3(0, 0, 1), ivec3(0, 0, -1));
+
+
+	for (int i = 0; i < 6; i++) {
+        ivec3 Neighbour = Texel + Offsets[i];
+		vec3 Scaled = vec3(Neighbour) / u_Dim;
+		//Sum += texture(i_Prev, Scaled).x;
+		Sum += texelFetch(i_Prev, Neighbour, 0).x;
+	}
+
+	float Result = Sum / 6. ;
+
+	imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Result));
+}
