@@ -1,2 +1,3 @@
-# Candela-Mechanics
-Candela.. but with.. PHYSICS! :D
+# Thermal Simulation
+
+3D Volumetric heat transfer simulation built on top of my engine (Candela)
