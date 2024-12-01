@@ -154,6 +154,16 @@ vec3 blackbody(float t) {
     return color;
 }
 
+// T is between 0 and 1
+vec3 Heatmap(float T) {
+	T *= 3.14159f;
+	vec3 col;
+    col.r = sin(T);
+    col.g = sin(T*2.);
+    col.b = cos(T);
+	return col;
+}
+
 void main() {
 
 	float Depth = texture(u_Depth, v_TexCoords).x;
@@ -167,7 +177,7 @@ void main() {
 	o_Color = vec4(0.);
 
 	if (Depth < 0.99999999) {
-		o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*1000.);
+		o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*500.);
 	}
 
 	if (u_Ye) {

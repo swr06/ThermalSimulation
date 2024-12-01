@@ -18,7 +18,7 @@ void main() {
 
 	// Blur previous buffer 
 
-	float Sum = 0.0f;
+	float Laplacian = 0.0f;
 
 	ivec3 Offsets[6] = ivec3[](ivec3(1, 0, 0), ivec3(-1, 0, 0), ivec3(0, 1, 0),
                             ivec3(0, -1, 0), ivec3(0, 0, 1), ivec3(0, 0, -1));
@@ -28,10 +28,15 @@ void main() {
         ivec3 Neighbour = Texel + Offsets[i];
 		vec3 Scaled = vec3(Neighbour) / u_Dim;
 		//Sum += texture(i_Prev, Scaled).x;
-		Sum += texelFetch(i_Prev, Neighbour, 0).x;
+		Laplacian += texelFetch(i_Prev, Neighbour, 0).x - Current;
 	}
 
-	float Result = Sum / 6. ;
+	Laplacian /= u_Ratio * u_Ratio;
+
+	//float Result = Current + (Sum - Current*6.) * 0.1f ;
+
+	float Alpha = 0.002f;
+	float Result = Current + Laplacian * Alpha;
 
 	imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Result));
 }

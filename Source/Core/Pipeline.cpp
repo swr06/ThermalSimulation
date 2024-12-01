@@ -469,7 +469,7 @@ void Candela::StartPipeline()
 	Entity Cube2(&Cube);
 	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
 	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
-	Cube2.m_Temperature = 100.0;
+	Cube2.m_Temperature = 500.0;
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -613,23 +613,28 @@ void Candela::StartPipeline()
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
 
+
 		// Simulation :flushed:
 
-		SimulateShader.Use();
-		SimulateShader.SetFloat("u_Dt", DeltaTime);
-		SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
-		SimulateShader.SetFloat("u_Ratio", float(Voxelizer::GetVolRange())/float(Voxelizer::GetVolSize()));
-		SimulateShader.SetFloat("u_Dim", Voxelizer::GetVolSize());
-		SimulateShader.SetInteger("i_Prev", 0);
+		for (int i = 0; i < 2; i++) {
+			SimulateShader.Use();
+			SimulateShader.SetFloat("u_Dt", DeltaTime);
+			SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
+			SimulateShader.SetFloat("u_Ratio", float(Voxelizer::GetVolRange()) / float(Voxelizer::GetVolSize()));
+			SimulateShader.SetFloat("u_Dim", Voxelizer::GetVolSize());
+			SimulateShader.SetInteger("i_Prev", 0);
 
-		// Current output
-		glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
+			// Current output
+			glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 
-		glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
+
+			glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+			PrevSimBuff = !PrevSimBuff;
+		}
 
 		// Blit! 
 
@@ -652,7 +657,7 @@ void Candela::StartPipeline()
 		glBindTexture(GL_TEXTURE_2D, GBuffer.GetTexture());
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(!PrevSimBuff));
+		glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
 
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, GBuffer.GetDepthBuffer());
@@ -666,7 +671,6 @@ void Candela::StartPipeline()
 		glFinish();
 		app.FinishFrame();
 
-		PrevSimBuff = !PrevSimBuff;
 
 		CurrentTime = glfwGetTime();
 		DeltaTime = CurrentTime - Frametime;
