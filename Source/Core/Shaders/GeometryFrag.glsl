@@ -63,6 +63,7 @@ void main()
 	o_EntityNumber = u_EntityNumber + 2;
 
 	vec3 LFN = normalize(v_Normal);
+
 	o_Albedo.xyz = Albedo * 0.1f + Albedo * clamp(dot(LFN, normalize(vec3(0.3f, 1.0f, 0.3f))), 0., 1.);
 
 	//o_Albedo += o_Albedo * u_EmissiveColor * u_ModelEmission * 8.0f;

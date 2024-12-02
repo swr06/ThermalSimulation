@@ -11,12 +11,19 @@ uniform float u_Ratio;
 uniform float u_Dim;
 uniform int u_Frame;
 
+uniform int u_SimulationFrames;
+
 uniform sampler3D i_Prev;
 		
 void main() { 
 
 	ivec3 Texel = ivec3(gl_GlobalInvocationID.xyz);
-	float Current =	u_Frame <= 4 ? imageLoad(o_Texture, Texel).x : texelFetch(i_Prev, Texel, 0).x;
+	float Current =	u_SimulationFrames <= 1 ? imageLoad(o_Texture, Texel).x : texelFetch(i_Prev, Texel, 0).x;
+
+	if (u_SimulationFrames <= 1) {
+		imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Current));
+		return;
+	}
 
 	// Blur previous buffer 
 

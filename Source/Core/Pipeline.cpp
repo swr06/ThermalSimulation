@@ -75,6 +75,11 @@ static bool EditMode = false;
 static bool ShouldDrawGrid = true;
 static int EditOperation = 0;
 
+static int SimulationFrames = 0;
+bool DoSim = false;
+bool SpawnCube = false;
+bool RenderTempView = false;
+
 static Candela::Entity* SelectedEntity = nullptr;
 static ImGuizmo::MODE Mode = ImGuizmo::MODE::LOCAL;
 static bool UseSnap = true;
@@ -221,14 +226,15 @@ public:
 
 				ImGui::Text("Entity has parent object with model : %s", filename.c_str());
 				ImGui::Text("Entity Position : %f %f %f", SelectedEntity->m_Model[3].x, SelectedEntity->m_Model[3].y, SelectedEntity->m_Model[3].z);
-				ImGui::SliderFloat("Emissivity", &SelectedEntity->m_EmissiveAmount, 0.0f, 32.0f);
-				ImGui::SliderFloat("Entity Roughness Multiplier", &SelectedEntity->m_EntityRoughnessMultiplier, 0.0f, 8.0f);
-				ImGui::SliderFloat("Entity Roughness", &SelectedEntity->m_EntityRoughness, 0.0f, 8.0f);
-				ImGui::SliderFloat("Entity Metalness", &SelectedEntity->m_EntityMetalness, 0.0f, 1.0f);
-				ImGui::SliderFloat("Translucency Amount", &SelectedEntity->m_TranslucencyAmount, 0.0f, 1.0f);
-				ImGui::NewLine();
-				ImGui::Checkbox("Use Albedo map?", &SelectedEntity->m_UseAlbedoMap);
-				ImGui::Checkbox("Use PBR/Normal map?", &SelectedEntity->m_UsePBRMap);
+				ImGui::SliderFloat("Entity Alpha", &SelectedEntity->m_Alpha, 0.0f, 2.0f);
+				ImGui::SliderFloat("Entity Temperature", &SelectedEntity->m_Temperature, 0.0f, 1000.0f);
+				
+				if (ImGui::Button("DELETE")) {
+					EntityRenderList.erase(std::remove(EntityRenderList.begin(), EntityRenderList.end(), SelectedEntity), EntityRenderList.end());
+					delete SelectedEntity;
+					SelectedEntity = nullptr;
+				}
+
 				ImGui::End();
 			}
 		}
@@ -245,6 +251,9 @@ public:
 			ImGui::SliderFloat("Player Speed", &SpeedMultiplier, 0.01f, 24.0f);
 			ImGui::NewLine();
 			ImGui::SliderFloat3("Sun Direction", &_SunDirection[0], -1.0f, 1.0f);
+			ImGui::NewLine();
+
+			ImGui::Checkbox("DoSim", &DoSim);
 			ImGui::NewLine();
 
 			ImGui::Checkbox("Face Cull?", & DoFaceCulling);
@@ -354,6 +363,27 @@ public:
 		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_V && this->GetCurrentFrame() > 5)
 		{
 			vsync = !vsync;
+		}
+		
+		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_G && this->GetCurrentFrame() > 5)
+		{
+			DoSim = !DoSim;
+		}
+
+
+		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_R && this->GetCurrentFrame() > 5)
+		{
+			SimulationFrames = 0;
+		}
+
+		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_B && this->GetCurrentFrame() > 5)
+		{
+			SpawnCube = true;
+		}
+		
+		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_F && this->GetCurrentFrame() > 5)
+		{
+			RenderTempView = !RenderTempView;
 		}
 
 		if (e.type == Candela::EventTypes::MousePress && !ImGui::GetIO().WantCaptureMouse)
@@ -523,7 +553,6 @@ void Candela::StartPipeline()
 	EntityRenderList.push_back(&Cube1);
 	EntityRenderList.push_back(&Cube2);
 
-	std::vector<Entity> TempEntityBuffer;
 
 	bool PrevSimBuff = 1;
 
@@ -536,6 +565,19 @@ void Candela::StartPipeline()
 			GLClasses::DisplayFrameRate(app.GetWindow(), "Candela ");
 			continue;
 		}
+
+		if (SpawnCube) {
+			SpawnCube = false;
+			Entity *ptr = new Entity(&Cube);
+			Entity& CubeP = *ptr;
+			CubeP.m_Model = glm::translate(CubeP.m_Model, glm::vec3(Camera.GetPosition() + Camera.GetFront() * 1.5f));
+			CubeP.m_Model = glm::scale(CubeP.m_Model, glm::vec3(0.5));
+			CubeP.m_Temperature = 24.;
+			CubeP.m_Alpha = 1.0;
+			EntityRenderList.push_back(ptr);
+		}
+
+
 		glm::vec3 SunDirection = glm::normalize(_SunDirection);
 
 		InternalRenderResolution = RoundToNearest(InternalRenderResolution, 0.25f);
@@ -558,7 +600,7 @@ void Candela::StartPipeline()
 		CommonUniforms UniformBuffer = { View, Projection, InverseView, InverseProjection, PreviousProjection, PreviousView, glm::inverse(PreviousProjection), glm::inverse(PreviousView), (int)app.GetCurrentFrame(), SunDirection};
 
 		// VOXELIZE
-		if (app.GetCurrentFrame() <= 2)
+		if (SimulationFrames <= 2 && DoSim)
 		{
 			Voxelizer::Voxelize(glm::vec3(0.0,5.,0.), EntityRenderList);
 		}
@@ -620,28 +662,30 @@ void Candela::StartPipeline()
 
 		// Simulation :flushed:
 
-		for (int i = 0; i < 2; i++) {
-			SimulateShader.Use();
-			SimulateShader.SetFloat("u_Dt", DeltaTime);
-			SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
-			SimulateShader.SetFloat("u_Ratio", float(Voxelizer::GetVolRange()) / float(Voxelizer::GetVolSize()));
-			SimulateShader.SetFloat("u_Dim", Voxelizer::GetVolSize());
-			SimulateShader.SetInteger("i_Prev", 0);
-			SimulateShader.SetInteger("u_Frame", app.GetCurrentFrame());
+		if (DoSim) {
+			for (int i = 0; i < 2; i++) {
+				SimulateShader.Use();
+				SimulateShader.SetFloat("u_Dt", DeltaTime);
+				SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
+				SimulateShader.SetFloat("u_Ratio", float(Voxelizer::GetVolRange()) / float(Voxelizer::GetVolSize()));
+				SimulateShader.SetFloat("u_Dim", Voxelizer::GetVolSize());
+				SimulateShader.SetInteger("i_Prev", 0);
+				SimulateShader.SetInteger("u_Frame", app.GetCurrentFrame());
+				SimulateShader.SetInteger("u_SimulationFrames", SimulationFrames);
 
-			// Current output
-			glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
-			glBindImageTexture(2, Voxelizer::GetVolume(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+				// Current output
+				glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+				glBindImageTexture(2, Voxelizer::GetVolume(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
 
-			glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
-			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+				glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
+				glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-			PrevSimBuff = !PrevSimBuff;
+				PrevSimBuff = !PrevSimBuff;
+			}
 		}
-
 		// Blit! 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -655,7 +699,7 @@ void Candela::StartPipeline()
 		BasicBlitShader.SetInteger("u_VoxelRange", Voxelizer::GetVolRange());
 		BasicBlitShader.SetInteger("u_VoxelVolSize", Voxelizer::GetVolSize());
 
-		BasicBlitShader.SetBool("u_Ye", glfwGetKey(app.GetWindow(), GLFW_KEY_F) == GLFW_PRESS);
+		BasicBlitShader.SetBool("u_Ye", RenderTempView);
 		
 		SetCommonUniforms<GLClasses::Shader>(BasicBlitShader, UniformBuffer);
 
@@ -677,6 +721,10 @@ void Candela::StartPipeline()
 		glFinish();
 		app.FinishFrame();
 
+		if (DoSim) {
+			SimulationFrames++;
+		}
+
 
 		CurrentTime = glfwGetTime();
 		DeltaTime = CurrentTime - Frametime;
@@ -686,7 +734,10 @@ void Candela::StartPipeline()
 			WindowResizedThisFrame = false;
 		}
 
-		GLClasses::DisplayFrameRate(app.GetWindow(), EditMode ? "Candela | Edit Mode | " : "Candela | ");
+		std::string _s;
+		_s = (EditMode ? "Candela | Edit Mode | " : "Candela | ");
+		_s += DoSim ? ("  |  SIM ON") : "";
+		GLClasses::DisplayFrameRate(app.GetWindow(), _s);
 	}
 }
 
