@@ -170,6 +170,8 @@ public:
 
 			// Draw editor
 
+			static bool DeleteFlag = false;
+
 			ImGuizmo::BeginFrame();
 
 			ImGuizmo::SetOrthographic(false);
@@ -179,7 +181,11 @@ public:
 				DrawGrid(Camera.GetViewMatrix(), Camera.GetProjectionMatrix(), glm::vec3(0.0f, 1.0f, 0.0f), 200.0f);
 			}
 
-			if (SelectedEntity) {
+			if (DeleteFlag) {
+				DeleteFlag = false;
+			}
+
+			if (SelectedEntity && std::find(EntityRenderList.begin(), EntityRenderList.end(), SelectedEntity) != EntityRenderList.end()) {
 
 				const ImGuizmo::OPERATION Ops[4] = { ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::OPERATION::ROTATE, ImGuizmo::OPERATION::SCALE, ImGuizmo::OPERATION::UNIVERSAL };
 
@@ -231,8 +237,7 @@ public:
 				
 				if (ImGui::Button("DELETE")) {
 					EntityRenderList.erase(std::remove(EntityRenderList.begin(), EntityRenderList.end(), SelectedEntity), EntityRenderList.end());
-					delete SelectedEntity;
-					SelectedEntity = nullptr;
+					DeleteFlag = true;
 				}
 
 				ImGui::End();
