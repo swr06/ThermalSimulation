@@ -2,7 +2,7 @@
 
 #include "ModelRenderer.h"
 
-#define VOXELRES 384
+#define VOXELRES 256
 
 namespace Candela {
 

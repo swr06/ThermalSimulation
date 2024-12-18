@@ -496,20 +496,140 @@ void Candela::StartPipeline()
 	// Entities can have an arbitrary model matrix, transparency etc.
 
 	// Create the main model 
-	Entity MainModelEntity(&MainModel);
-	MainModelEntity.m_Model = glm::scale(glm::mat4(MainModelEntity.m_Model), glm::vec3(0.05f));
-	MainModelEntity.m_Alpha = 1.0;
+
+	float GPU_TEMP = 400.0f;
+
+
+	float Heights[4] = { 8., 7., 6., 5. };
+
+	{
+		float z = -12.0f;
+		while (true) {
+			if (z > 12.) {
+				break;
+			}
+
+			{
+				Entity* m = new Entity(&MainModel);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(-13.5, 0., z));
+				m->m_Model = glm::rotate(glm::mat4(m->m_Model), 3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
+				m->m_Alpha = 1.0;
+				EntityRenderList.push_back(m);
+			}
+
+
+			for (int i = 0 ; i < 4 ; i++)
+			{
+				Entity* m = new Entity(&Cube);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(-13.5, Heights[i], z));
+				//m->m_Model = glm::rotate(glm::mat4(m->m_Model), 3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
+				m->m_Alpha = 1.0;
+				m->m_Temperature = GPU_TEMP;
+				EntityRenderList.push_back(m);
+			}
+
+
+			z += 4.7f;
+		}
+	}
+
+	{
+		float z = -12.0f;
+		while (true) {
+			if (z > 12.) {
+				break;
+			}
+			{
+				Entity* m = new Entity(&MainModel);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(13.5, 0., z));
+				m->m_Model = glm::rotate(glm::mat4(m->m_Model), -3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
+				m->m_Alpha = 1.0;
+				EntityRenderList.push_back(m);
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				Entity* m = new Entity(&Cube);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(13.5, Heights[i], z));
+				//m->m_Model = glm::rotate(glm::mat4(m->m_Model), 3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
+				m->m_Alpha = 1.0;
+				m->m_Temperature = GPU_TEMP;
+				EntityRenderList.push_back(m);
+			}
+
+
+			z += 4.7f;
+		}
+	}
+
+	{
+		float z = -6.;
+		while (true) {
+			if (z > 6.) {
+				break;
+			}
+			{
+				Entity* m = new Entity(&MainModel);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, 0., -13.5));
+				//m->m_Model = glm::rotate(glm::mat4(m->m_Model), -3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
+				m->m_Alpha = 1.0;
+				EntityRenderList.push_back(m);
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				Entity* m = new Entity(&Cube);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, Heights[i], -13.5));
+				m->m_Model = glm::rotate(glm::mat4(m->m_Model), 3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
+				m->m_Alpha = 1.0;
+				m->m_Temperature = GPU_TEMP;
+				EntityRenderList.push_back(m);
+			}
+
+			z += 4.7f;
+		}
+	}
+
+	{
+		float z = -6.0f;
+		while (true) {
+			if (z > 6.) {
+				break;
+			}
+			{
+				Entity* m = new Entity(&MainModel);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, 0., 13.5));
+				m->m_Model = glm::rotate(glm::mat4(m->m_Model), -3.14159f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
+				m->m_Alpha = 1.0;
+				EntityRenderList.push_back(m);
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				Entity* m = new Entity(&Cube);
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, Heights[i], 13.5));
+				m->m_Model = glm::rotate(glm::mat4(m->m_Model), 3.14159f / 2.0f, glm::vec3(0., 1., 0.));
+				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
+				m->m_Alpha = 1.0;
+				m->m_Temperature = GPU_TEMP;
+				EntityRenderList.push_back(m);
+			}
+			z += 4.7f;
+		}
+	}
+
 
 	Entity Cube1(&Cube);
-	Cube1.m_Model = glm::translate(Cube1.m_Model, glm::vec3(0., 6.52967, 6.));
-	Cube1.m_Model = glm::scale(Cube1.m_Model, glm::vec3(16.2812, 6.50893, 9.07462));
+	Cube1.m_Model = glm::translate(Cube1.m_Model, glm::vec3(0., 7., 0.));
+	Cube1.m_Model = glm::scale(Cube1.m_Model, glm::vec3(16., 6., 16));
 	Cube1.m_Alpha = 0.5;
-
-	Entity Cube2(&Cube);
-	Cube2.m_Model = glm::translate(Cube2.m_Model, glm::vec3(0.0106201, 7.36716, 0.339718));
-	Cube2.m_Model = glm::scale(Cube2.m_Model, glm::vec3(0.630969, 1.11626, 0.322089));
-	Cube2.m_Temperature = 380.0f;
-	Cube2.m_Alpha = 0.9;
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -554,9 +674,7 @@ void Candela::StartPipeline()
 	Voxelizer::CreateVolumes();
 	Voxelizer::RecompileShaders();
 
-	EntityRenderList.push_back(&MainModelEntity);
 	EntityRenderList.push_back(&Cube1);
-	EntityRenderList.push_back(&Cube2);
 
 
 	bool PrevSimBuff = 1;
@@ -610,16 +728,16 @@ void Candela::StartPipeline()
 			Voxelizer::Voxelize(glm::vec3(0.0,5.,0.), EntityRenderList);
 		}
 
-		if (app.GetCurrentFrame() % 128 == 0) {
-			for (auto& e : EntityRenderList) {
-				glm::vec3 p, s;
-				DecomposeMatrix(e->m_Model, p, s);
-				std::cout << "P : " << p.x << " " << p.y << " " << p.z << "\n";
-				std::cout << "S : " << s.x << " " << s.y << " " << s.z << "\n";
-				std::cout << "\n\n";
-			}
-		}
-
+		//if (app.GetCurrentFrame() % 128 == 0) {
+		//	for (auto& e : EntityRenderList) {
+		//		glm::vec3 p, s;
+		//		DecomposeMatrix(e->m_Model, p, s);
+		//		std::cout << "P : " << p.x << " " << p.y << " " << p.z << "\n";
+		//		std::cout << "S : " << s.x << " " << s.y << " " << s.z << "\n";
+		//		std::cout << "\n\n";
+		//	}
+		//}
+		//
 
 		// Render GBuffer
 
@@ -668,7 +786,7 @@ void Candela::StartPipeline()
 		// Simulation :flushed:
 
 		if (DoSim) {
-			for (int i = 0; i < 2; i++) {
+			for (int i = 0; i < 3; i++) {
 				SimulateShader.Use();
 				SimulateShader.SetFloat("u_Dt", DeltaTime);
 				SimulateShader.SetFloat("u_DeltaTime", DeltaTime);

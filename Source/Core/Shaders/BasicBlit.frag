@@ -179,14 +179,13 @@ void main() {
 
 	if (Depth < 0.99999999) {
 		//o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*10000.);
-		float T = texture(u_Volume, Voxel).x;
+		float T = texture(u_Volume, Voxel).x * (5./4.);
 		T = 1. - exp(-T);
-		T *= 1.1f;
 		o_Color.xyz = Heatmap(T);
 	}
 
 	if (u_Ye) {
-		o_Color.xyz = texture(u_Input, v_TexCoords).xxx;
+		o_Color.xyz = texture(u_Input, v_TexCoords).xyz;
 	}
 	bool debug = false;
 
