@@ -13,6 +13,7 @@ namespace Candela {
 
 	static GLuint VoxelMap = 0;
 	static GLuint TemperatureMap = 0;
+	static GLuint SaturationMap = 0;
 	static GLuint TemperatureMap1 = 0;
 
 	static float Align(float value, float size)
@@ -44,6 +45,16 @@ namespace Candela {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_FLOAT, nullptr);
+
+		glGenTextures(1, &SaturationMap);
+		glBindTexture(GL_TEXTURE_3D, SaturationMap);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, VOXELRES, VOXELRES, VOXELRES, 0, GL_RED, GL_FLOAT, nullptr);
+
 
 		glGenTextures(1, &TemperatureMap);
 		glBindTexture(GL_TEXTURE_3D, TemperatureMap);
@@ -108,11 +119,18 @@ namespace Candela {
 		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
+		ClearShader->Use();
+		ClearShader->SetFloat("u_ClearValue", 0.0f);
+		glBindImageTexture(0, SaturationMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+		glDispatchCompute(VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE, VOXELRES / GROUP_SIZE);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
 		//// Voxelize ->
 		
 		VoxelizeShader->Use();
 		glBindImageTexture(0, VoxelMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		glBindImageTexture(1, TemperatureMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+		glBindImageTexture(2, SaturationMap, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 		
 		VoxelizeShader->SetVector3f("u_VoxelGridCenter", Position);
 		VoxelizeShader->SetVector3f("u_VoxelGridCenterF", Position);
@@ -140,6 +158,11 @@ namespace Candela {
 	GLuint Voxelizer::GetTempVolume(bool x)
 	{
 		return x ? TemperatureMap : TemperatureMap1;
+	}
+
+	GLuint Voxelizer::GetSaturationVolume()
+	{
+		return GLuint(SaturationMap);
 	}
 	
 

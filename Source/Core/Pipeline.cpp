@@ -53,6 +53,12 @@ int __MainViewMeshesRendered = 0;
 Candela::Player Player;
 Candela::FPSCamera& Camera = Player.Camera;
 
+
+// 
+double AverageTemperature;
+///
+
+
 static bool vsync = true;
 static glm::vec3 _SunDirection = glm::vec3(0.1f, -1.0f, 0.1f);
 
@@ -245,9 +251,14 @@ public:
 		}
 
 		if (ImGui::Begin("Options")) {
+
+			static double PrintAverageTemp = 0.0f;
+			PrintAverageTemp = glm::mix(PrintAverageTemp, AverageTemperature, 0.02);
+
 			ImGui::Text("Camera Position : %f,  %f,  %f", Camera.GetPosition().x, Camera.GetPosition().y, Camera.GetPosition().z);
 			ImGui::Text("Camera Front : %f,  %f,  %f", Camera.GetFront().x, Camera.GetFront().y, Camera.GetFront().z);
 			ImGui::Text("Time : %f s", glfwGetTime());
+			ImGui::Text("Average Temperature : %lf", PrintAverageTemp);
 			ImGui::NewLine();
 			ImGui::Text("Number of Meshes Rendered (For the main camera view) : %d", __MainViewMeshesRendered);
 			ImGui::Text("Total Number of Meshes Rendered : %d", __TotalMeshesRendered);
@@ -497,7 +508,7 @@ void Candela::StartPipeline()
 
 	// Create the main model 
 
-	float GPU_TEMP = 400.0f;
+	float GPU_TEMP = 4000.0f;
 
 
 	float Heights[4] = { 8., 7., 6., 5. };
@@ -511,7 +522,7 @@ void Candela::StartPipeline()
 
 			{
 				Entity* m = new Entity(&MainModel);
-				m->m_Model = glm::translate(m->m_Model, glm::vec3(-13.5, 0., z));
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(-13.5, 0.8, z));
 				m->m_Model = glm::rotate(glm::mat4(m->m_Model), 3.14159f / 2.0f, glm::vec3(0., 1., 0.));
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
 				m->m_Alpha = 1.0;
@@ -543,7 +554,7 @@ void Candela::StartPipeline()
 			}
 			{
 				Entity* m = new Entity(&MainModel);
-				m->m_Model = glm::translate(m->m_Model, glm::vec3(13.5, 0., z));
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(13.5, 0.8, z));
 				m->m_Model = glm::rotate(glm::mat4(m->m_Model), -3.14159f / 2.0f, glm::vec3(0., 1., 0.));
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
 				m->m_Alpha = 1.0;
@@ -574,7 +585,7 @@ void Candela::StartPipeline()
 			}
 			{
 				Entity* m = new Entity(&MainModel);
-				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, 0., -13.5));
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, 0.8, -13.5));
 				//m->m_Model = glm::rotate(glm::mat4(m->m_Model), -3.14159f / 2.0f, glm::vec3(0., 1., 0.));
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
 				m->m_Alpha = 1.0;
@@ -604,7 +615,7 @@ void Candela::StartPipeline()
 			}
 			{
 				Entity* m = new Entity(&MainModel);
-				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, 0., 13.5));
+				m->m_Model = glm::translate(m->m_Model, glm::vec3(z, 0.8, 13.5));
 				m->m_Model = glm::rotate(glm::mat4(m->m_Model), -3.14159f, glm::vec3(0., 1., 0.));
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.05f));
 				m->m_Alpha = 1.0;
@@ -630,6 +641,13 @@ void Candela::StartPipeline()
 	Cube1.m_Model = glm::translate(Cube1.m_Model, glm::vec3(0., 7., 0.));
 	Cube1.m_Model = glm::scale(Cube1.m_Model, glm::vec3(16., 6., 16));
 	Cube1.m_Alpha = 0.5;
+
+	// Sensor model
+	GLuint SensorSSBO;
+	glGenBuffers(1, &SensorSSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * 32, 0, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	// Create VBO and VAO for drawing the screen-sized quad.
 	GLClasses::VertexBuffer ScreenQuadVBO;
@@ -675,8 +693,6 @@ void Candela::StartPipeline()
 	Voxelizer::RecompileShaders();
 
 	EntityRenderList.push_back(&Cube1);
-
-
 	bool PrevSimBuff = 1;
 
 	while (!glfwWindowShouldClose(app.GetWindow()))
@@ -785,8 +801,14 @@ void Candela::StartPipeline()
 
 		// Simulation :flushed:
 
+		AverageTemperature = 0;
+
 		if (DoSim) {
-			for (int i = 0; i < 3; i++) {
+			int ITERATIONS = 3;
+			for (int i = 0; i < ITERATIONS; i++) {
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
+				glClearBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_R32F, 0, 32*sizeof(float), GL_RED, GL_FLOAT, nullptr);
+
 				SimulateShader.Use();
 				SimulateShader.SetFloat("u_Dt", DeltaTime);
 				SimulateShader.SetFloat("u_DeltaTime", DeltaTime);
@@ -799,15 +821,27 @@ void Candela::StartPipeline()
 				// Current output
 				glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 				glBindImageTexture(2, Voxelizer::GetVolume(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
+				glBindImageTexture(3, Voxelizer::GetSaturationVolume(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
 
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_3D, Voxelizer::GetTempVolume(PrevSimBuff));
+
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, SensorSSBO);
 
 				glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
 				glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 				PrevSimBuff = !PrevSimBuff;
+
+				// Read back
+				GLfloat data[32];
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
+				glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(data), data);
+				AverageTemperature += data[0];
 			}
+
+			AverageTemperature /= float(ITERATIONS);
 		}
 		// Blit! 
 

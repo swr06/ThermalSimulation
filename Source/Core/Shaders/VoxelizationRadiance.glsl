@@ -5,6 +5,7 @@
 
 layout(R32F, binding = 0) uniform image3D o_VoxelVolume;
 layout(R32F, binding = 1) uniform image3D o_Temperature;
+layout(R32F, binding = 2) uniform image3D o_SaturationMap;
 
 in vec3 g_WorldPosition;
 in vec3 g_VolumePosition;
@@ -39,5 +40,6 @@ void main() {
 		ivec3 VoxelSpaceCoord = ivec3(Voxel * float(u_VolumeSize));
 		imageStore(o_VoxelVolume, VoxelSpaceCoord, vec4(u_TAlpha));
 		imageStore(o_Temperature, VoxelSpaceCoord, vec4(u_Temperature));
+		imageStore(o_SaturationMap, VoxelSpaceCoord, vec4(u_Temperature));
 	}
 }

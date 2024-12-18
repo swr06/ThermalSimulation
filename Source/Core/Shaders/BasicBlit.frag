@@ -179,7 +179,7 @@ void main() {
 
 	if (Depth < 0.99999999) {
 		//o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*10000.);
-		float T = texture(u_Volume, Voxel).x * (5./4.);
+		float T = texture(u_Volume, Voxel).x;
 		T = 1. - exp(-T);
 		o_Color.xyz = Heatmap(T);
 	}
