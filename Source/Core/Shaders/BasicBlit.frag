@@ -21,6 +21,7 @@ uniform int u_VoxelVolSize;
 
 uniform bool u_Ye;
 uniform bool u_Skibidi;
+uniform float u_TempFalloff;
 
 in vec2 v_TexCoords;
 
@@ -179,7 +180,7 @@ void main() {
 
 	if (Depth < 0.99999999) {
 		//o_Color.xyz = blackbody(texture(u_Volume, Voxel).x*10000.);
-		float T = texture(u_Volume, Voxel).x;
+		float T = texture(u_Volume, Voxel).x * u_TempFalloff;
 		T = 1. - exp(-T);
 		o_Color.xyz = Heatmap(T);
 	}

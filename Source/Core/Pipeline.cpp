@@ -56,9 +56,25 @@ Candela::FPSCamera& Camera = Player.Camera;
 
 // 
 double AverageTemperature;
+
+
+float GPU_TEMP = 400.0f;
+// Energy calc
+
+float PeltierCoeff = 1700. * 0.000001;
+float Area = 2;
+float InternalResistance = 0.4f;
+float TempFalloff = 0.11f;
+
+float PeltierPower(float DeltaT) {
+	float Num = PeltierCoeff * Area * DeltaT;
+	// 18 servers
+	return (18. * 28. * Num * Num) / (4. * InternalResistance);
+}
+
 ///
 
-
+static bool WireFrame = false;
 static bool vsync = true;
 static glm::vec3 _SunDirection = glm::vec3(0.1f, -1.0f, 0.1f);
 
@@ -90,6 +106,7 @@ static Candela::Entity* SelectedEntity = nullptr;
 static ImGuizmo::MODE Mode = ImGuizmo::MODE::LOCAL;
 static bool UseSnap = true;
 static glm::vec3 SnapSize = glm::vec3(0.5f);
+static bool SaturateTemp = true;
 
 // Frame time plotter
 static float* GraphX;
@@ -255,10 +272,13 @@ public:
 			static double PrintAverageTemp = 0.0f;
 			PrintAverageTemp = glm::mix(PrintAverageTemp, AverageTemperature, 0.02);
 
+
 			ImGui::Text("Camera Position : %f,  %f,  %f", Camera.GetPosition().x, Camera.GetPosition().y, Camera.GetPosition().z);
-			ImGui::Text("Camera Front : %f,  %f,  %f", Camera.GetFront().x, Camera.GetFront().y, Camera.GetFront().z);
+			//ImGui::Text("Camera Front : %f,  %f,  %f", Camera.GetFront().x, Camera.GetFront().y, Camera.GetFront().z);
 			ImGui::Text("Time : %f s", glfwGetTime());
-			ImGui::Text("Average Temperature : %lf", PrintAverageTemp);
+			float scaled = glm::min(GPU_TEMP * 1.05f, SaturateTemp ? float(PrintAverageTemp * 1.25f) : float(PrintAverageTemp * GPU_TEMP / 25.f));
+			ImGui::Text("Average Temperature : %lf", scaled);
+			ImGui::Text("Power : %lf WATTS", PeltierPower(glm::max(0.f, scaled * .92423f)-273.15f));
 			ImGui::NewLine();
 			ImGui::Text("Number of Meshes Rendered (For the main camera view) : %d", __MainViewMeshesRendered);
 			ImGui::Text("Total Number of Meshes Rendered : %d", __TotalMeshesRendered);
@@ -270,9 +290,11 @@ public:
 			ImGui::NewLine();
 
 			ImGui::Checkbox("DoSim", &DoSim);
+			ImGui::Checkbox("Saturate Temp", &SaturateTemp);
 			ImGui::NewLine();
 
-			ImGui::Checkbox("Face Cull?", & DoFaceCulling);
+			//ImGui::Checkbox("Face Cull?", & DoFaceCulling);
+			ImGui::SliderFloat("Temp Falloff", &TempFalloff, 0.001f, 2.0f);
 			
 
 		} ImGui::End();
@@ -401,6 +423,11 @@ public:
 		{
 			RenderTempView = !RenderTempView;
 		}
+		
+		if (e.type == Candela::EventTypes::KeyPress && e.key == GLFW_KEY_I && this->GetCurrentFrame() > 5)
+		{
+			WireFrame = !WireFrame;
+		}
 
 		if (e.type == Candela::EventTypes::MousePress && !ImGui::GetIO().WantCaptureMouse)
 		{
@@ -462,7 +489,8 @@ void DecomposeMatrix(const glm::mat4& matrix, glm::vec3& position, glm::vec3& sc
 	);
 }
 
-
+float PeltierEnergy() {
+}
 
 void Candela::StartPipeline()
 {
@@ -508,7 +536,8 @@ void Candela::StartPipeline()
 
 	// Create the main model 
 
-	float GPU_TEMP = 4000.0f;
+
+	std::vector<glm::vec4> Sensors;
 
 
 	float Heights[4] = { 8., 7., 6., 5. };
@@ -530,7 +559,7 @@ void Candela::StartPipeline()
 			}
 
 
-			for (int i = 0 ; i < 4 ; i++)
+			for (int i = 0; i < 4; i++)
 			{
 				Entity* m = new Entity(&Cube);
 				m->m_Model = glm::translate(m->m_Model, glm::vec3(-13.5, Heights[i], z));
@@ -538,6 +567,7 @@ void Candela::StartPipeline()
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
 				m->m_Alpha = 1.0;
 				m->m_Temperature = GPU_TEMP;
+				Sensors.push_back(glm::vec4(-13.5, Heights[i], z, 0.));
 				EntityRenderList.push_back(m);
 			}
 
@@ -569,6 +599,7 @@ void Candela::StartPipeline()
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
 				m->m_Alpha = 1.0;
 				m->m_Temperature = GPU_TEMP;
+				Sensors.push_back(glm::vec4(13.5, Heights[i], z, 0.));
 				EntityRenderList.push_back(m);
 			}
 
@@ -600,6 +631,7 @@ void Candela::StartPipeline()
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
 				m->m_Alpha = 1.0;
 				m->m_Temperature = GPU_TEMP;
+				Sensors.push_back(glm::vec4(z, Heights[i], -13.5, 0.));
 				EntityRenderList.push_back(m);
 			}
 
@@ -630,11 +662,13 @@ void Candela::StartPipeline()
 				m->m_Model = glm::scale(glm::mat4(m->m_Model), glm::vec3(0.5f, 0.25f, 1.2f));
 				m->m_Alpha = 1.0;
 				m->m_Temperature = GPU_TEMP;
+				Sensors.push_back(glm::vec4(z, Heights[i], 13.5, 0.));
 				EntityRenderList.push_back(m);
 			}
 			z += 4.7f;
 		}
 	}
+
 
 
 	Entity Cube1(&Cube);
@@ -646,7 +680,14 @@ void Candela::StartPipeline()
 	GLuint SensorSSBO;
 	glGenBuffers(1, &SensorSSBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * 32, 0, GL_DYNAMIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * 64, 0, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
+	GLuint SensorPositionsSSBO;
+	glGenBuffers(1, &SensorPositionsSSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorPositionsSSBO);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * 64 * 4, Sensors.data(), GL_STATIC_DRAW);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	// Create VBO and VAO for drawing the screen-sized quad.
@@ -697,6 +738,7 @@ void Candela::StartPipeline()
 
 	while (!glfwWindowShouldClose(app.GetWindow()))
 	{
+
 		// Window is minimized.
 		if (glfwGetWindowAttrib(app.GetWindow(), GLFW_ICONIFIED)) {
 			app.OnUpdate();
@@ -775,6 +817,9 @@ void Candela::StartPipeline()
 		GBuffer.Bind();
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (WireFrame) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
 		GBufferShader.Use();
 		GBufferShader.SetMatrix4("u_ViewProjection", Camera.GetViewProjection());
 		GBufferShader.SetInteger("u_AlbedoMap", 0);
@@ -791,6 +836,7 @@ void Candela::StartPipeline()
 
 		RenderEntityList(EntityRenderList, GBufferShader, false);
 		UnbindEverything();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		// Post processing passes :
 
@@ -806,8 +852,6 @@ void Candela::StartPipeline()
 		if (DoSim) {
 			int ITERATIONS = 3;
 			for (int i = 0; i < ITERATIONS; i++) {
-				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
-				glClearBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_R32F, 0, 32*sizeof(float), GL_RED, GL_FLOAT, nullptr);
 
 				SimulateShader.Use();
 				SimulateShader.SetFloat("u_Dt", DeltaTime);
@@ -817,6 +861,9 @@ void Candela::StartPipeline()
 				SimulateShader.SetInteger("i_Prev", 0);
 				SimulateShader.SetInteger("u_Frame", app.GetCurrentFrame());
 				SimulateShader.SetInteger("u_SimulationFrames", SimulationFrames);
+				SimulateShader.SetInteger("u_VoxelRange", Voxelizer::GetVolRange());
+				SimulateShader.SetInteger("u_VoxelVolSize", Voxelizer::GetVolSize());
+				SimulateShader.SetBool("u_SaturateTemp", SaturateTemp);
 
 				// Current output
 				glBindImageTexture(1, Voxelizer::GetTempVolume(!PrevSimBuff), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32F);
@@ -829,19 +876,30 @@ void Candela::StartPipeline()
 				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
 				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, SensorSSBO);
 
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorPositionsSSBO);
+				glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, SensorPositionsSSBO);
+
 				glDispatchCompute(Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8, Voxelizer::GetVolSize() / 8);
 				glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 				PrevSimBuff = !PrevSimBuff;
 
 				// Read back
-				GLfloat data[32];
+				GLfloat data[64];
 				glBindBuffer(GL_SHADER_STORAGE_BUFFER, SensorSSBO);
-				glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(data), data);
-				AverageTemperature += data[0];
+				glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(float) * 64, data);
+
+				double avgcur = 0.;
+				for (int i = 0; i < 64; i++) {
+					avgcur += data[i];
+				}
+				avgcur /= double(64);
+				AverageTemperature = avgcur;
+
+				std::cout << "\n\n";
 			}
 
-			AverageTemperature /= float(ITERATIONS);
+			//AverageTemperature /= float(ITERATIONS);
 		}
 		// Blit! 
 
@@ -855,7 +913,7 @@ void Candela::StartPipeline()
 		BasicBlitShader.SetInteger("u_Frame", app.GetCurrentFrame());
 		BasicBlitShader.SetInteger("u_VoxelRange", Voxelizer::GetVolRange());
 		BasicBlitShader.SetInteger("u_VoxelVolSize", Voxelizer::GetVolSize());
-
+		BasicBlitShader.SetFloat("u_TempFalloff", TempFalloff);
 		BasicBlitShader.SetBool("u_Ye", RenderTempView);
 		
 		SetCommonUniforms<GLClasses::Shader>(BasicBlitShader, UniformBuffer);

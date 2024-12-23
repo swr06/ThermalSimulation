@@ -12,17 +12,42 @@ uniform float u_Ratio;
 uniform float u_Dim;
 uniform int u_Frame;
 
+
+uniform int u_VoxelRange;
+uniform int u_VoxelVolSize;
 uniform int u_SimulationFrames;
+uniform bool u_SaturateTemp;
 
 uniform sampler3D i_Prev;
 
+vec3 TransformToVoxelSpace(vec3 WorldPosition) {
+	WorldPosition = WorldPosition - vec3(0.,5.,0.);
+	float Size = float(u_VoxelRange);
+	float HalfExtent = Size / 2.0f;
+	vec3 ScaledPos = WorldPosition / HalfExtent;
+	vec3 Voxel = ScaledPos;
+	Voxel = Voxel * 0.5f + 0.5f;
+	return (Voxel);
+}
+
 layout (std430, binding = 4) buffer SensorBuffer {
-    float SensorData[32];
+    float SensorData[64];
+};
+
+layout (std430, binding = 5) buffer SensorBufferPositions {
+    vec4 SensorPositions[64];
 };
 		
 void main() { 
 
 	ivec3 Texel = ivec3(gl_GlobalInvocationID.xyz);
+	
+	if (Texel == ivec3(4)) {
+		for (int i = 0 ; i < 64 ; i++) {
+			SensorData[i] = texture(i_Prev, TransformToVoxelSpace(vec3(-2.,8.,-13.))).x;
+		}
+	}
+	
 	float Current =	u_SimulationFrames <= 1 ? imageLoad(o_Texture, Texel).x : texelFetch(i_Prev, Texel, 0).x;
 
 	if (u_SimulationFrames <= 1) {
@@ -92,22 +117,21 @@ void main() {
                        Texel.z == 0 || Texel.z == int(u_Dim) - 1);
 
 	// Simple boundary condition 
-    if (Boundary) {
+    if (false) 
+	{
         Result = 0.;
 	}
 
 	// Saturation Condition 
 	bool DoSaturation = false;
-	
-	if(DoSaturation)
+
+	if(u_SaturateTemp)
 	{
 		float Sampled = imageLoad(i_SaturationMap, Texel).x;
 		Result = max(Result, Sampled);
 	}
 
 	if (!isnan(Result) && !isinf(Result)) {
-		SensorData[0] += Result;
-		barrier();
 		imageStore(o_Texture, ivec3(gl_GlobalInvocationID.xyz), vec4(Result));
 	}
 }
